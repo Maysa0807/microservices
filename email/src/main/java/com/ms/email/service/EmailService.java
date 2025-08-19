@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 
 @Service
@@ -28,20 +29,24 @@ public class EmailService {
     @Transactional
     public EmailEntity sendEmail(EmailEntity emailEntity) {
         try{
-            emailEntity.setSendDateEmail(LocalDateTime.now());
-            emailEntity.setEmailFrom(emailFrom);
+        	Optional<EmailEntity> emailE = emailRepository.findByUserId(emailEntity.getUserId());
+            if (!emailE.isPresent() || emailE.get().getStatusEmail().equals(StatusEmail.ERROR)) {
+                emailEntity.setSendDateEmail(LocalDateTime.now());
+                emailEntity.setEmailFrom(emailFrom);
 
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(emailEntity.getEmailTo());
-            message.setSubject(emailEntity.getSubject());
-            message.setText(emailEntity.getText());
-            emailSender.send(message);
+                SimpleMailMessage message = new SimpleMailMessage();
+                message.setTo(emailEntity.getEmailTo());
+                message.setSubject(emailEntity.getSubject());
+                message.setText(emailEntity.getText());
+                emailSender.send(message);
 
-            emailEntity.setStatusEmail(StatusEmail.SENT);
+                emailEntity.setStatusEmail(StatusEmail.SENT);
+                
+                return emailRepository.save(emailEntity);
+            }
         } catch (MailException e){
             emailEntity.setStatusEmail(StatusEmail.ERROR);
-        } finally {
-            return emailRepository.save(emailEntity);
         }
+		return emailEntity;
     }
 }
